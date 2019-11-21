@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/guillaumemichel/local_clusters/config"
+	"github.com/guillaumemichel/ipfs-local/config"
 )
 
 func clean() {
@@ -116,7 +116,7 @@ func main() {
 	if err != nil {
 		fmt.Println("Error leader:", err)
 	}
-	fmt.Println("\n***** IPFS cluster leader started at", bootstrap, "*****\n")
+	fmt.Printf("\n***** IPFS cluster leader started at %s *****\n\n", bootstrap)
 
 	wg := sync.WaitGroup{}
 
