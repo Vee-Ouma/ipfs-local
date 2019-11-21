@@ -38,7 +38,7 @@ func startIPFS(ip string) {
 	// we need to fork the process
 	go func() {
 		exec.Command("ipfs", "-c"+path, "daemon").Run()
-		fmt.Println("ipfs at ip", ip, "crashed")
+		//fmt.Println("ipfs at ip", ip, "crashed")
 	}()
 }
 
