@@ -10,7 +10,7 @@ const (
 	// IPFSStartupTime IPFSStartupTime
 	IPFSStartupTime = 13 * time.Second
 	// ClusterStartupTime ClusterStartupTime
-	ClusterStartupTime = 3 * time.Second
+	ClusterStartupTime = 4 * time.Second
 	// DefaultIPFSInstances DefaultIPFSInstances
 	DefaultIPFSInstances = 4
 	// LocalAddr LocalAddr

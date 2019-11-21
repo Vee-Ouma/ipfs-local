@@ -197,6 +197,9 @@ func SetupClusterLeader(configPath, nodeID, ip string,
 		fmt.Println(ip + " cluster crashed")
 	}()
 
+	addr := IPVersion + ip + TransportProtocol + strconv.Itoa(ports.RestAPI)
+	fmt.Println("Started ipfs-cluster at " + addr)
+
 	// wait for the daemon to be launched
 	time.Sleep(2 * time.Second)
 
@@ -244,6 +247,9 @@ func SetupClusterSlave(configPath, nodeID, ip, bootstrap, secret string,
 
 	// wait for the daemon to be launched
 	time.Sleep(2 * time.Second)
+
+	addr := IPVersion + ip + TransportProtocol + strconv.Itoa(ports.RestAPI)
+	fmt.Println("Started ipfs-cluster at " + addr)
 
 	return nil
 }

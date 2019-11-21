@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -55,9 +56,10 @@ func createNode(ip string) {
 }
 
 func main() {
-	//path := *flag.String("path", DefaultConfigPath, "path for the config files")
-	nodes := flag.Int("nodes", DefaultIPFSInstances, "number of ipfs instances")
-	clusters := flag.Int("clusters", DefaultIPFSInstances, "number of ipfs-cluster instances")
+	nodes := flag.Int("nodes", DefaultIPFSInstances,
+		"number of ipfs instances")
+	clusters := flag.Int("clusters", DefaultIPFSInstances,
+		"number of ipfs-cluster instances")
 
 	flag.Parse()
 	// help message
@@ -114,33 +116,37 @@ func main() {
 	if err != nil {
 		fmt.Println("Error leader:", err)
 	}
-	fmt.Println("***** IPFS cluster leader started at", bootstrap, "*****")
+	fmt.Println("\n***** IPFS cluster leader started at", bootstrap, "*****\n")
 
-	currCluster := 0
+	wg := sync.WaitGroup{}
+
+	currCluster := 1
 	for i := 0; i < ipfsN; i++ {
-		count := currCluster
-		clusterC := clusterN/ipfsN + count
-		if clusterC%ipfsN <= i {
+		//count := currCluster
+		clusterC := clusterN / ipfsN // +count
+		if i < clusterN%ipfsN {
 			clusterC++
 		}
-		if i == 0 { // don't count master twice
-			currCluster++
+		if i == 0 {
+			clusterC--
 		}
-		slavePath := path.Join(DefaultConfigPath, addrs[i])
-		for j := currCluster; j < clusterC; j++ {
-			go func(i, currCluster int) {
+		wg.Add(1)
+		go func(n, cN int) {
+			slavePath := path.Join(DefaultConfigPath, addrs[n])
+			for j := cN; j < cN+clusterC; j++ {
 				err = config.SetupClusterSlave(slavePath,
-					ClusterInstanceName+strconv.Itoa(currCluster), addrs[i],
+					ClusterInstanceName+strconv.Itoa(j), addrs[n],
 					bootstrap, secret, DefaultReplMin, DefaultReplMax)
 				if err != nil {
 					fmt.Println("Error slave:", err)
 				}
-			}(i, currCluster)
-			currCluster++
-		}
+			}
+			wg.Done()
+		}(i, currCluster)
+		currCluster += clusterC
 	}
-	time.Sleep(ClusterStartupTime)
-	fmt.Println("***** IPFS cluster instances started *****")
+	wg.Wait()
+	fmt.Println("\n***** IPFS cluster instances started *****")
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
