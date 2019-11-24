@@ -10,29 +10,6 @@ import (
 	"time"
 )
 
-const (
-	//DefaultIPFSAPIPort DefaultIPFSAPIPort
-	DefaultIPFSAPIPort = 5001
-	// DefaultIPFSGatewayPort DefaultIPFSGatewayPort
-	DefaultIPFSGatewayPort = 8080
-	// DefaultIPFSSwarmPort DefaultIPFSSwarmPort
-	DefaultIPFSSwarmPort = 4001
-)
-
-// ClusterPorts ports that are used by the cluster
-type ClusterPorts struct {
-	IPFSAPI   int
-	RestAPI   int
-	IPFSProxy int
-	Cluster   int
-}
-
-// IPVersion default ip version
-const IPVersion string = "/ip4/"
-
-// TransportProtocol default transport protocol
-const TransportProtocol string = "/tcp/"
-
 // EditIPFSConfig edit the ipfs configuration file (mainly the ip)
 func EditIPFSConfig(path, ip string) {
 	addr := IPVersion + ip + TransportProtocol
@@ -65,7 +42,7 @@ func EditIPFSField(path, field, value string) {
 
 // SetClusterLeaderConfig set the configs for the leader of a cluster
 func SetClusterLeaderConfig(path, ip, peername string,
-	replmin, replmax int, ports ClusterPorts) (
+	replmin, replmax int, ports ClusterInstance) (
 	string, string, error) {
 
 	// generate random secret
@@ -83,16 +60,16 @@ func SetClusterLeaderConfig(path, ip, peername string,
 
 // GetClusterVariables get the cluster variables
 func GetClusterVariables(path, ip, secret, peername string,
-	replmin, replmax int, ports ClusterPorts) string {
+	replmin, replmax int, ports ClusterInstance) string {
 
 	apiIPFSAddr := IPVersion + ip +
-		TransportProtocol + strconv.Itoa(ports.IPFSAPI) // 5001
+		TransportProtocol + strconv.Itoa(ports.IPFSAPIPort) // 5001
 	restAPIAddr := IPVersion + ip +
-		TransportProtocol + strconv.Itoa(ports.RestAPI) // 9094
+		TransportProtocol + strconv.Itoa(ports.RestAPIPort) // 9094
 	IPFSProxyAddr := IPVersion + ip +
-		TransportProtocol + strconv.Itoa(ports.IPFSProxy) // 9095
+		TransportProtocol + strconv.Itoa(ports.IPFSProxyPort) // 9095
 	clusterAddr := IPVersion + ip +
-		TransportProtocol + strconv.Itoa(ports.Cluster) // 9096
+		TransportProtocol + strconv.Itoa(ports.ClusterPort) // 9096
 
 	cmd := ""
 
@@ -144,13 +121,13 @@ func MakeJSONArray(elements []string) string {
 
 // SetupClusterLeader setup a cluster instance for the ARA leader
 func SetupClusterLeader(configPath, nodeID, ip string,
-	replmin, replmax int) (string, string, int, error) {
+	replmin, replmax int) (string, *ClusterInstance, error) {
 
 	// generate random secret
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	if err != nil {
-		return "", "", 0, errors.New("could not generate secret")
+		return "", nil, errors.New("could not generate secret")
 	}
 	secret := hex.EncodeToString(key)
 
@@ -158,23 +135,22 @@ func SetupClusterLeader(configPath, nodeID, ip string,
 	path := configPath + "/cluster_" + secret
 	err = CreateEmptyDir(path)
 	if err != nil {
-		return "", "", 0, err
+		return "", nil, err
 	}
 
 	ints, err := GetNextAvailablePorts(14000, 15000, 3)
 	if err != nil {
-		return "", "", 0, err
+		return "", nil, err
 	}
 
 	// set the ports that the cluster will use
-	ports := ClusterPorts{
-		IPFSAPI:   5001,
-		RestAPI:   (*ints)[0],
-		IPFSProxy: (*ints)[1],
-		Cluster:   (*ints)[2],
+	ports := ClusterInstance{
+		IP:            IPVersion + ip + TransportProtocol,
+		IPFSAPIPort:   5001,
+		RestAPIPort:   (*ints)[0],
+		IPFSProxyPort: (*ints)[1],
+		ClusterPort:   (*ints)[2],
 	}
-
-	bootstrap := IPVersion + ip + TransportProtocol + strconv.Itoa((*ints)[2])
 
 	// get the environment variables to set cluster configs
 	vars := GetClusterVariables(path, ip, secret, nodeID,
@@ -187,7 +163,7 @@ func SetupClusterLeader(configPath, nodeID, ip string,
 		fmt.Println(cmd)
 		fmt.Println(string(o))
 		fmt.Println(err)
-		return "", "", 0, err
+		return "", nil, err
 	}
 
 	// start cluster daemon
@@ -197,37 +173,38 @@ func SetupClusterLeader(configPath, nodeID, ip string,
 		fmt.Println(ip + " cluster crashed")
 	}()
 
-	addr := IPVersion + ip + TransportProtocol + strconv.Itoa(ports.RestAPI)
+	addr := IPVersion + ip + TransportProtocol + strconv.Itoa(ports.RestAPIPort)
 	fmt.Println("Started ipfs-cluster at " + addr)
 
 	// wait for the daemon to be launched
 	time.Sleep(2 * time.Second)
 
-	return secret, bootstrap, ports.RestAPI, nil
+	return secret, &ports, nil
 }
 
 // SetupClusterSlave setup a cluster slave instance
 func SetupClusterSlave(configPath, nodeID, ip, bootstrap, secret string,
-	replmin, replmax int) (int, error) {
+	replmin, replmax int) (*ClusterInstance, error) {
 
 	// create the config directory, identified by the secret of the cluster
 	path := configPath + "/cluster_" + nodeID + "_" + secret
 	err := CreateEmptyDir(path)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	ints, err := GetNextAvailablePorts(14000, 15000, 3)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	// set the ports that the cluster will use
-	ports := ClusterPorts{
-		IPFSAPI:   DefaultIPFSAPIPort,
-		RestAPI:   (*ints)[0],
-		IPFSProxy: (*ints)[1],
-		Cluster:   (*ints)[2],
+	ports := ClusterInstance{
+		IP:            IPVersion + ip + TransportProtocol,
+		IPFSAPIPort:   DefaultIPFSAPIPort,
+		RestAPIPort:   (*ints)[0],
+		IPFSProxyPort: (*ints)[1],
+		ClusterPort:   (*ints)[2],
 	}
 
 	// get the environment variables to set cluster configs
@@ -238,7 +215,7 @@ func SetupClusterSlave(configPath, nodeID, ip, bootstrap, secret string,
 	cmd := vars + "ipfs-cluster-service -c " + path + " init"
 	err = exec.Command("bash", "-c", cmd).Run()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	// start cluster daemon
@@ -248,10 +225,10 @@ func SetupClusterSlave(configPath, nodeID, ip, bootstrap, secret string,
 	// wait for the daemon to be launched
 	time.Sleep(2 * time.Second)
 
-	addr := IPVersion + ip + TransportProtocol + strconv.Itoa(ports.RestAPI)
+	addr := ports.IP + strconv.Itoa(ports.RestAPIPort)
 	fmt.Println("Started ipfs-cluster at " + addr)
 
-	return ports.RestAPI, nil
+	return &ports, nil
 }
 
 // Protocol to start all clusters in an ARA
@@ -260,8 +237,9 @@ func Protocol(configPath, nodeID, ip string, replmin, replmax int) error {
 	// for all ARAs (trees ?) where nodeID is the leader: do
 
 	// setup the leader of the cluster
-	secret, bootstrap, _, err := SetupClusterLeader(configPath, "master", ip,
+	secret, p, err := SetupClusterLeader(configPath, "master", ip,
 		replmin, replmax)
+	bootstrap := p.IP + strconv.Itoa(p.ClusterPort)
 	if err != nil {
 		return err
 	}

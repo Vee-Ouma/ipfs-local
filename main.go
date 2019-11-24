@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -113,18 +112,16 @@ func main() {
 	// setup the leader of the cluster
 	leaderPath := path.Join(DefaultConfigPath, addrs[0])
 
-	addresses := make([]cluster.RestAPIAddress, clusterN)
+	instances := make([]config.ClusterInstance, clusterN)
 
-	secret, bootstrap, port, err := config.SetupClusterLeader(leaderPath,
+	secret, p, err := config.SetupClusterLeader(leaderPath,
 		ClusterInstanceName+"0", addrs[0], DefaultReplMin, DefaultReplMax)
+	bootstrap := p.IP + strconv.Itoa(p.ClusterPort)
 	if err != nil {
 		fmt.Println("Error leader:", err)
 	}
 	fmt.Printf("\n***** IPFS cluster leader started at %s *****\n\n", bootstrap)
-	addresses[0] = cluster.RestAPIAddress{
-		IP:   addrs[0],
-		Port: port,
-	}
+	instances[0] = *p
 
 	wg := sync.WaitGroup{}
 
@@ -148,10 +145,7 @@ func main() {
 				if err != nil {
 					fmt.Println("Error slave:", err)
 				}
-				addresses[j] = cluster.RestAPIAddress{
-					IP:   addrs[n],
-					Port: p,
-				}
+				instances[j] = *p
 			}
 			wg.Done()
 		}(i, currCluster)
@@ -161,7 +155,7 @@ func main() {
 	fmt.Println("\n***** IPFS cluster instances started *****")
 
 	time.Sleep(14 * time.Second)
-	go cluster.DoThings(context.TODO(), addresses[0].IP, strconv.Itoa(addresses[0].Port))
+	go cluster.DoThings(instances)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
