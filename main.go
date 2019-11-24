@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/guillaumemichel/ipfs-local/cluster"
 	"github.com/guillaumemichel/ipfs-local/config"
 )
 
@@ -111,12 +113,18 @@ func main() {
 	// setup the leader of the cluster
 	leaderPath := path.Join(DefaultConfigPath, addrs[0])
 
-	secret, bootstrap, err := config.SetupClusterLeader(leaderPath,
+	addresses := make([]cluster.RestAPIAddress, clusterN)
+
+	secret, bootstrap, port, err := config.SetupClusterLeader(leaderPath,
 		ClusterInstanceName+"0", addrs[0], DefaultReplMin, DefaultReplMax)
 	if err != nil {
 		fmt.Println("Error leader:", err)
 	}
 	fmt.Printf("\n***** IPFS cluster leader started at %s *****\n\n", bootstrap)
+	addresses[0] = cluster.RestAPIAddress{
+		IP:   addrs[0],
+		Port: port,
+	}
 
 	wg := sync.WaitGroup{}
 
@@ -134,11 +142,15 @@ func main() {
 		go func(n, cN int) {
 			slavePath := path.Join(DefaultConfigPath, addrs[n])
 			for j := cN; j < cN+clusterC; j++ {
-				err = config.SetupClusterSlave(slavePath,
+				p, err := config.SetupClusterSlave(slavePath,
 					ClusterInstanceName+strconv.Itoa(j), addrs[n],
 					bootstrap, secret, DefaultReplMin, DefaultReplMax)
 				if err != nil {
 					fmt.Println("Error slave:", err)
+				}
+				addresses[j] = cluster.RestAPIAddress{
+					IP:   addrs[n],
+					Port: p,
 				}
 			}
 			wg.Done()
@@ -147,6 +159,9 @@ func main() {
 	}
 	wg.Wait()
 	fmt.Println("\n***** IPFS cluster instances started *****")
+
+	time.Sleep(14 * time.Second)
+	go cluster.DoThings(context.TODO(), addresses[0].IP, strconv.Itoa(addresses[0].Port))
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

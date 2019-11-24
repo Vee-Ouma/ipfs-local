@@ -144,13 +144,13 @@ func MakeJSONArray(elements []string) string {
 
 // SetupClusterLeader setup a cluster instance for the ARA leader
 func SetupClusterLeader(configPath, nodeID, ip string,
-	replmin, replmax int) (string, string, error) {
+	replmin, replmax int) (string, string, int, error) {
 
 	// generate random secret
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
 	if err != nil {
-		return "", "", errors.New("could not generate secret")
+		return "", "", 0, errors.New("could not generate secret")
 	}
 	secret := hex.EncodeToString(key)
 
@@ -158,12 +158,12 @@ func SetupClusterLeader(configPath, nodeID, ip string,
 	path := configPath + "/cluster_" + secret
 	err = CreateEmptyDir(path)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 
 	ints, err := GetNextAvailablePorts(14000, 15000, 3)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, err
 	}
 
 	// set the ports that the cluster will use
@@ -187,7 +187,7 @@ func SetupClusterLeader(configPath, nodeID, ip string,
 		fmt.Println(cmd)
 		fmt.Println(string(o))
 		fmt.Println(err)
-		return "", "", err
+		return "", "", 0, err
 	}
 
 	// start cluster daemon
@@ -203,23 +203,23 @@ func SetupClusterLeader(configPath, nodeID, ip string,
 	// wait for the daemon to be launched
 	time.Sleep(2 * time.Second)
 
-	return secret, bootstrap, nil
+	return secret, bootstrap, ports.RestAPI, nil
 }
 
 // SetupClusterSlave setup a cluster slave instance
 func SetupClusterSlave(configPath, nodeID, ip, bootstrap, secret string,
-	replmin, replmax int) error {
+	replmin, replmax int) (int, error) {
 
 	// create the config directory, identified by the secret of the cluster
 	path := configPath + "/cluster_" + nodeID + "_" + secret
 	err := CreateEmptyDir(path)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	ints, err := GetNextAvailablePorts(14000, 15000, 3)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// set the ports that the cluster will use
@@ -238,7 +238,7 @@ func SetupClusterSlave(configPath, nodeID, ip, bootstrap, secret string,
 	cmd := vars + "ipfs-cluster-service -c " + path + " init"
 	err = exec.Command("bash", "-c", cmd).Run()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// start cluster daemon
@@ -251,7 +251,7 @@ func SetupClusterSlave(configPath, nodeID, ip, bootstrap, secret string,
 	addr := IPVersion + ip + TransportProtocol + strconv.Itoa(ports.RestAPI)
 	fmt.Println("Started ipfs-cluster at " + addr)
 
-	return nil
+	return ports.RestAPI, nil
 }
 
 // Protocol to start all clusters in an ARA
@@ -260,18 +260,18 @@ func Protocol(configPath, nodeID, ip string, replmin, replmax int) error {
 	// for all ARAs (trees ?) where nodeID is the leader: do
 
 	// setup the leader of the cluster
-	secret, bootstrap, err := SetupClusterLeader(configPath, "master", ip,
+	secret, bootstrap, _, err := SetupClusterLeader(configPath, "master", ip,
 		replmin, replmax)
 	if err != nil {
 		return err
 	}
 	// for all nodes in this ARA
-	err = SetupClusterSlave(configPath, "slave1", ip, bootstrap, secret,
+	_, err = SetupClusterSlave(configPath, "slave1", ip, bootstrap, secret,
 		replmin, replmax)
 	if err != nil {
 		return err
 	}
-	err = SetupClusterSlave(configPath, "slave2", ip, bootstrap, secret,
+	_, err = SetupClusterSlave(configPath, "slave2", ip, bootstrap, secret,
 		replmin, replmax)
 	if err != nil {
 		return err

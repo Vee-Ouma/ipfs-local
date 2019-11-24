@@ -13,3 +13,6 @@
 
 # executable
 ipfs-local
+
+# data files
+data/*
