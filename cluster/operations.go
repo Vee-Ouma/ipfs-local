@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/guillaumemichel/ipfs-local/config"
+
 	"github.com/ipfs/ipfs-cluster/api/rest/client"
 	ma "github.com/multiformats/go-multiaddr"
 )
@@ -27,7 +28,11 @@ func DoThings(instances []config.ClusterInstance) {
 	checkErr(err)
 
 	ListPeers(c)
-	AddFile(c, "data/hello.txt")
+	cid := AddFile(c, "../data/hello.txt")
+	AddFile(c, "../data/rfc1918.txt")
+	AddFile(c, "../data/kiddo.gif")
+
+	CatFile(c, cid)
 
 	/*
 		id, err := c.ID(ctx)

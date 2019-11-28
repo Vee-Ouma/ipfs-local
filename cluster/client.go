@@ -28,7 +28,7 @@ func ListPeers(c client.Client) {
 }
 
 // AddFile to the cluster
-func AddFile(c client.Client, path string) {
+func AddFile(c client.Client, path string) string {
 	ctx := context.Background()
 
 	out := make(chan *api.AddedOutput)
@@ -36,4 +36,20 @@ func AddFile(c client.Client, path string) {
 	go c.Add(ctx, paths, api.DefaultAddParams(), out)
 	ao := <-out
 	fmt.Printf("\nAdded %s: %s\n", filepath.Base(path), ao.Name)
+	return ao.Name
+}
+
+// CatFile cat an added text file
+func CatFile(c client.Client, filename string) {
+	ctx := context.Background()
+
+	sh := c.IPFS(ctx)
+	rc, err := sh.Cat(filename)
+	checkErr(err)
+
+	buffer := make([]byte, 1024)
+	n, err := rc.Read(buffer)
+	checkErr(err)
+	str := string(buffer[:n])
+	fmt.Printf("\ncat "+filename+":\n%s", str)
 }

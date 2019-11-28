@@ -13,6 +13,9 @@
 
 # executable
 ipfs-local
+start/start
+cluster/cluster
 
 # data files
 data/*
+start/configlocal/*
