@@ -13,6 +13,12 @@ import (
 // default file mode for files that the program writes to the system
 const defaultFileMode os.FileMode = 0777
 
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 // CreateEmptyDir create an empty directory at the given path
 func CreateEmptyDir(path string) error {
 	// remove existing dir if any

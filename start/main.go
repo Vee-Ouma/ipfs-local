@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/guillaumemichel/ipfs-local/cluster"
 	"github.com/guillaumemichel/ipfs-local/config"
 )
 
@@ -155,7 +154,11 @@ func main() {
 	time.Sleep(14 * time.Second)
 	fmt.Println("\n***** IPFS cluster instances started *****")
 
-	go cluster.DoThings(instances)
+	config.SaveInstances(instances, "save0")
+	newInstances := config.LoadInstances("save0")
+	fmt.Println(instances)
+	fmt.Println(newInstances)
+	//go cluster.DoThings(instances)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

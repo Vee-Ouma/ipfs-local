@@ -12,4 +12,12 @@ const (
 	IPVersion string = "/ip4/"
 	// TransportProtocol default transport protocol
 	TransportProtocol string = "/tcp/"
+
+	statepath                  = "saves"
+	nodeIdentifier             = "Node_"
+	ipIdentifier               = "  IP: "
+	ipfsAPIIdentifier          = "  IPFS API Port: "
+	clusterPortIdentifier      = "  IPFS cluster port: "
+	clusterProxyPortIdentifier = "  Cluster proxy port: "
+	clusterAPIPortIdentifier   = "  Cluster API port: "
 )
