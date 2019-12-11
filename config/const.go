@@ -13,11 +13,12 @@ const (
 	// TransportProtocol default transport protocol
 	TransportProtocol string = "/tcp/"
 
-	statepath                  = "saves"
+	statepath                  = "../config/saves"
 	nodeIdentifier             = "Node_"
 	ipIdentifier               = "  IP: "
 	ipfsAPIIdentifier          = "  IPFS API Port: "
 	clusterPortIdentifier      = "  IPFS cluster port: "
 	clusterProxyPortIdentifier = "  Cluster proxy port: "
 	clusterAPIPortIdentifier   = "  Cluster API port: "
+	linesPerInstance           = 7
 )

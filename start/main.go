@@ -155,10 +155,6 @@ func main() {
 	fmt.Println("\n***** IPFS cluster instances started *****")
 
 	config.SaveInstances(instances, "save0")
-	newInstances := config.LoadInstances("save0")
-	fmt.Println(instances)
-	fmt.Println(newInstances)
-	//go cluster.DoThings(instances)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

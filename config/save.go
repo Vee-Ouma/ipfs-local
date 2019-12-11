@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
@@ -50,26 +49,21 @@ func LoadInstances(filename string) []ClusterInstance {
 		panic(err)
 	}
 	str := string(bytes)
-	fmt.Println("str", str)
 	lines := strings.Split(str, "\n")
-	fmt.Println("lines", len(lines))
-	for _, l := range lines {
-		fmt.Println(l)
-	}
 
-	instances := make([]ClusterInstance, len(lines)/7)
+	instances := make([]ClusterInstance, len(lines)/linesPerInstance)
 	for i := 0; i < len(instances); i++ {
-		instances[i].IP = strings.Split(lines[i+1], ipIdentifier)[1]
-		instances[i].IPFSAPIPort, err = strconv.Atoi(strings.Split(lines[i+2],
+		instances[i].IP = strings.Split(lines[i*linesPerInstance+1], ipIdentifier)[1]
+		instances[i].IPFSAPIPort, err = strconv.Atoi(strings.Split(lines[i*linesPerInstance+2],
 			ipfsAPIIdentifier)[1])
 		checkErr(err)
-		instances[i].ClusterPort, err = strconv.Atoi(strings.Split(lines[i+3],
+		instances[i].ClusterPort, err = strconv.Atoi(strings.Split(lines[i*linesPerInstance+3],
 			clusterPortIdentifier)[1])
 		checkErr(err)
-		instances[i].IPFSProxyPort, err = strconv.Atoi(strings.Split(lines[i+4],
+		instances[i].IPFSProxyPort, err = strconv.Atoi(strings.Split(lines[i*linesPerInstance+4],
 			clusterProxyPortIdentifier)[1])
 		checkErr(err)
-		instances[i].RestAPIPort, err = strconv.Atoi(strings.Split(lines[i+5],
+		instances[i].RestAPIPort, err = strconv.Atoi(strings.Split(lines[i*linesPerInstance+5],
 			clusterAPIPortIdentifier)[1])
 		checkErr(err)
 	}
