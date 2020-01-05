@@ -79,6 +79,9 @@ func GetClusterVariables(path, ip, secret, peername string,
 	// edit the secret
 	cmd += GetEnvVar("CLUSTER_SECRET", secret)
 
+	cmd += GetEnvVar("CLUSTER_REPLICATIONFACTORMIN", "2")
+	cmd += GetEnvVar("CLUSTER_REPLICATIONFACTORMAX", "3")
+
 	// replace IPFS API port (5001)
 	cmd += GetEnvVar("CLUSTER_IPFSPROXY_NODEMULTIADDRESS", apiIPFSAddr) // 5001
 	cmd += GetEnvVar("CLUSTER_IPFSHTTP_NODEMULTIADDRESS", apiIPFSAddr)  // 5001
@@ -157,7 +160,7 @@ func SetupClusterLeader(configPath, nodeID, ip string,
 		replmin, replmax, ports)
 
 	// init command to be run
-	cmd := vars + "ipfs-cluster-service -c " + path + " init"
+	cmd := vars + "ipfs-cluster-service -c " + path + " init --consensus crdt"
 	o, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
 		fmt.Println(cmd)
@@ -212,7 +215,7 @@ func SetupClusterSlave(configPath, nodeID, ip, bootstrap, secret string,
 		replmin, replmax, ports)
 
 	// init command to be run
-	cmd := vars + "ipfs-cluster-service -c " + path + " init"
+	cmd := vars + "ipfs-cluster-service -c " + path + " init --consensus crdt"
 	err = exec.Command("bash", "-c", cmd).Run()
 	if err != nil {
 		return nil, err

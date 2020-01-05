@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/ipfs/ipfs-cluster/api"
 	"github.com/ipfs/ipfs-cluster/api/rest/client"
@@ -31,12 +33,28 @@ func ListPeers(c client.Client) {
 func AddFile(c client.Client, path string) string {
 	ctx := context.Background()
 
-	out := make(chan *api.AddedOutput)
+	cids := make(chan string, 10)
+	out := make(chan *api.AddedOutput, 1)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(ch chan string) {
+		defer wg.Done()
+		for v := range out {
+			if v == nil {
+				return
+			}
+			ch <- v.Cid.String()
+		}
+	}(cids)
+
 	paths := []string{path}
-	go c.Add(ctx, paths, api.DefaultAddParams(), out)
-	ao := <-out
-	fmt.Printf("\nAdded %s: %s\n", filepath.Base(path), ao.Name)
-	return ao.Name
+	start := time.Now()
+	c.Add(ctx, paths, api.DefaultAddParams(), out)
+	wg.Wait()
+	fmt.Println(time.Now().Sub(start))
+	name := <-cids
+	fmt.Printf("\nAdded %s: %s\n", filepath.Base(path), name)
+	return name
 }
 
 // CatFile cat an added text file
@@ -44,7 +62,9 @@ func CatFile(c client.Client, filename string) {
 	ctx := context.Background()
 
 	sh := c.IPFS(ctx)
+	start := time.Now()
 	rc, err := sh.Cat(filename)
+	fmt.Println(time.Now().Sub(start))
 	checkErr(err)
 
 	buffer := make([]byte, 1024)

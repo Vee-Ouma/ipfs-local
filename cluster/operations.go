@@ -66,3 +66,21 @@ func DoThings(instances []config.ClusterInstance) {
 		fmt.Println(str)
 	*/
 }
+
+func Test0(instances []config.ClusterInstance) {
+	proxyAddr, err := ma.NewMultiaddr(fmt.Sprintf(instances[0].IP +
+		strconv.Itoa(instances[0].IPFSProxyPort)))
+	checkErr(err)
+	apiAddr, err := ma.NewMultiaddr(fmt.Sprintf(instances[0].IP +
+		strconv.Itoa(instances[0].RestAPIPort)))
+	checkErr(err)
+
+	conf := client.Config{
+		APIAddr:   apiAddr,
+		ProxyAddr: proxyAddr,
+	}
+
+	_, err = client.NewDefaultClient(&conf)
+	checkErr(err)
+
+}
